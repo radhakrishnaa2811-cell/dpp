@@ -5,11 +5,15 @@ import { Dashboard } from './components/Dashboard';
 import { DemoTest } from './components/DemoTest';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { UnifiedGameInterface } from './components/UnifiedGameInterface';
+import SpellingAssessment from './components/SpellingAssessment';
 import { Button } from './components/ui/button';
 import { Card } from './components/ui/card';
 import { Home, RotateCcw } from 'lucide-react';
-import { gradeLevels } from './data/words';
+import { gradeLevels, Phoneme, Word } from './data/words';
 import { getWordImage } from './data/imageMapping';
+import { getAuth } from "firebase/auth";
+import { initializeApp } from "firebase/app";
+import { submitGrade, submitWords } from './services/api';
 
 interface User {
   id: string;
@@ -30,9 +34,25 @@ interface PlayerProfile {
   averageAccuracy: number;
   lastPlayed: string;
 }
+const firebaseConfig = {
+  apiKey: "AIzaSyAndj6cTVS48-koGsdYyVr_BLCEIu5G1tU",
+  authDomain: "the-dear-parent-project.firebaseapp.com",
+  projectId: "the-dear-parent-project",
+  storageBucket: "the-dear-parent-project.firebasestorage.app",
+  messagingSenderId: "235781574670",
+  appId: "1:235781574670:web:f5e8fe651ac34667abec5f",
+  measurementId: "G-SKHRXP4H06"
+};
+
+
+// Initialize Firebase
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
 
 type GameState = 'intro' | 'playing' | 'correct' | 'incorrect' | 'complete';
 type AppView = 'auth' | 'tutorial' | 'dashboard' | 'game';
+
+
 
 export default function App() {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
@@ -41,17 +61,20 @@ export default function App() {
   const [selectedGradeLevel, setSelectedGradeLevel] = useState(0);
   const [currentWordIndex, setCurrentWordIndex] = useState(0);
   const [gameState, setGameState] = useState<GameState>('intro');
+  const [wordsList, setWordsList] = useState<Word[]>([]);
   const [sessionStats, setSessionStats] = useState({
     wordsCompleted: 0,
     totalAttempts: 0,
     correctAnswers: 0
   });
 
+  const [assessmentData, setAssessmentData] = useState<any>(null);
   const currentGrade = gradeLevels[selectedGradeLevel];
-  const currentWord = currentGrade?.words[currentWordIndex];
+  const apiWord = wordsList;
+  const currentWord = apiWord;
   
-  // Determine if we should use drag-drop (Kindergarten) or writing (1st+ grade)
-  const useDragDrop = selectedGradeLevel === 0; // Kindergarten uses drag-drop
+  // Determine if we should use drag-drop (Kindergarden) or writing (1st+ grade)
+  const useDragDrop = selectedGradeLevel === 0; // Kindergarden uses drag-drop
 
   // Check for existing authentication on app load
   useEffect(() => {
@@ -106,44 +129,44 @@ export default function App() {
     handleTutorialComplete(); // Same action as completing
   };
 
-  const handleStartGame = (profile: PlayerProfile, gradeLevel: number) => {
-    setSelectedProfile(profile);
-    setSelectedGradeLevel(gradeLevel);
-    setCurrentWordIndex(0);
-    setGameState('playing');
-    setSessionStats({
-      wordsCompleted: 0,
-      totalAttempts: 0,
-      correctAnswers: 0
-    });
-    setCurrentView('game');
-  };
-
-  const handleWordComplete = (success: boolean) => {
-    const newStats = {
-      ...sessionStats,
-      totalAttempts: sessionStats.totalAttempts + 1,
-      correctAnswers: sessionStats.correctAnswers + (success ? 1 : 0),
-      wordsCompleted: sessionStats.wordsCompleted + (success ? 1 : 0)
-    };
-    setSessionStats(newStats);
-
-    // Update profile progress
-    if (selectedProfile) {
-      updateProfileProgress(selectedProfile, success);
+  const handleStartGame = async (profile: PlayerProfile, gradeLevel: number) => {
+    try {
+      setSelectedProfile(profile);
+      setSelectedGradeLevel(gradeLevel);
+      
+      // Get the grade name from the gradeLevels array
+      const gradeName = gradeLevels[gradeLevel].name.replace(/ grade$/i, '').trim();
+      
+      // Call the API to get words for this grade
+      const wordResponse = await submitGrade(gradeName);
+      
+      // // Store the words from the API
+      setWordsList(wordResponse.words);
+      // setGameState('complete');
+      // Reset game state
+      setCurrentWordIndex(0);
+      setGameState('playing');
+      setSessionStats({
+        wordsCompleted: 0,
+        totalAttempts: 0,
+        correctAnswers: 0
+      });
+      setCurrentView('game');
+    } catch (error) {
+      console.error('Error starting game:', error);
     }
-
-    // Move to next word after current word processing
-    setTimeout(() => {
-      if (currentWordIndex < currentGrade.words.length - 1) {
-        setCurrentWordIndex(currentWordIndex + 1);
-        setGameState('playing');
-      } else {
-        // End of level
-        setGameState('complete');
-      }
-    }, 100);
   };
+
+const handleWordComplete = async (results: Array<{ word: string; user_input: string; type: string }>) => {
+  try {
+    const response = await submitWords(results, selectedProfile?.id);
+    setAssessmentData(response); // Store the API response
+    setGameState('complete');
+  } catch (error) {
+    console.error('Error submitting words:', error);
+  }
+  console.log(results);
+};
 
   const updateProfileProgress = (profile: PlayerProfile, success: boolean) => {
     const profiles = JSON.parse(localStorage.getItem('phonics-profiles') || '[]');
@@ -173,6 +196,7 @@ export default function App() {
     setSelectedProfile(null);
     setSelectedGradeLevel(0);
     setCurrentWordIndex(0);
+    setAssessmentData(null);
     setGameState('intro');
   };
 
@@ -186,18 +210,23 @@ export default function App() {
     });
   };
 
-  const handleLogout = () => {
-    localStorage.removeItem('phonics-current-user');
-    setCurrentUser(null);
-    setCurrentView('auth');
-    setSelectedProfile(null);
-    setSelectedGradeLevel(0);
-    setCurrentWordIndex(0);
-    setGameState('intro');
+  const handleLogout = async () => {
+    try {
+      await auth.signOut();
+      localStorage.removeItem('phonics-profiles');
+      setCurrentUser(null);
+      setCurrentView('auth');
+      setSelectedProfile(null);
+      setSelectedGradeLevel(0);
+      setCurrentWordIndex(0);
+      setGameState('intro');
+    } catch (error) {
+      console.error('Error signing out:', error);
+    }
   };
 
   // ...existing code...
-  return (
+    return (
     <Router>
       <Routes>
         <Route path="/" element={
@@ -224,91 +253,43 @@ export default function App() {
               </div>
             </div>
           ) : (currentView === 'tutorial') ? (
-            <InteractiveTutorial
-              onComplete={handleTutorialComplete}
-              onSkip={handleTutorialSkip}
-              userName={currentUser.name}
-            />
+      <InteractiveTutorial
+        onComplete={handleTutorialComplete}
+        onSkip={handleTutorialSkip}
+        userName={currentUser.name}
+      />
           ) : (currentView === 'dashboard') ? (
-            <div className="min-h-screen bg-gradient-to-br from-blue-50 to-purple-50">
-              <Dashboard 
-                onStartGame={handleStartGame} 
-                currentUser={currentUser}
-                onLogout={handleLogout}
-                onShowTutorial={() => setCurrentView('tutorial')}
-              />
-            </div>
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-purple-50">
+        <Dashboard 
+          onStartGame={handleStartGame} 
+          currentUser={currentUser}
+          onLogout={handleLogout}
+          onShowTutorial={() => setCurrentView('tutorial')}
+        />
+      </div>
           ) : (!currentWord || !selectedProfile) ? (
-            <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-purple-200 via-pink-200 to-blue-200">
-              <div className="text-center">
-                <div className="text-6xl animate-gentle-float mb-4">🦉</div>
-                <div className="text-xl">Loading your phonics adventure...</div>
-              </div>
-            </div>
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-purple-200 via-pink-200 to-blue-200">
+        <div className="text-center">
+          <div className="text-6xl animate-gentle-float mb-4">🦉</div>
+          <div className="text-xl">Loading your phonics adventure...</div>
+        </div>
+      </div>
           ) : (gameState === 'complete') ? (
-            <div className="h-screen flex items-center justify-center bg-gradient-to-br from-purple-200 via-pink-200 to-blue-200 p-4">
-              <Card className="p-8 text-center bg-white/95 backdrop-blur shadow-2xl border-4 border-purple-300 rounded-3xl max-w-md">
-                <div className="mb-6">
-                  <div className="text-8xl mb-4 animate-gentle-bounce">🎉</div>
-                  <h2 className="text-3xl font-bold text-green-600 mb-2">
-                    Level Complete!
-                  </h2>
-                  <p className="text-gray-600">
-                    Amazing work completing {currentGrade.name}!
-                  </p>
-                  <div className="text-6xl my-4 animate-gentle-float">⭐</div>
-                </div>
-                <div className="grid grid-cols-3 gap-4 mb-6">
-                  <div className="bg-blue-100 p-4 rounded-2xl border-3 border-blue-300">
-                    <div className="text-2xl font-bold text-blue-600">
-                      {sessionStats.totalAttempts}
-                    </div>
-                    <div className="text-sm text-gray-600">Words</div>
-                  </div>
-                  <div className="bg-green-100 p-4 rounded-2xl border-3 border-green-300">
-                    <div className="text-2xl font-bold text-green-600">
-                      {sessionStats.correctAnswers}
-                    </div>
-                    <div className="text-sm text-gray-600">Correct</div>
-                  </div>
-                  <div className="bg-purple-100 p-4 rounded-2xl border-3 border-purple-300">
-                    <div className="text-2xl font-bold text-purple-600">
-                      {sessionStats.totalAttempts > 0 ? 
-                        Math.round((sessionStats.correctAnswers / sessionStats.totalAttempts) * 100) : 0}%
-                    </div>
-                    <div className="text-sm text-gray-600">Score</div>
-                  </div>
-                </div>
-                <div className="flex gap-4 justify-center">
-                  <Button onClick={handleRestartLevel} variant="outline" className="rounded-2xl btn-bouncy" size="lg">
-                    <RotateCcw className="w-4 h-4 mr-2" />
-                    Play Again
-                  </Button>
-                  <Button onClick={handleBackToDashboard} className="bg-purple-500 hover:bg-purple-600 rounded-2xl btn-bouncy" size="lg">
-                    <Home className="w-4 h-4 mr-2" />
-                    Home
-                  </Button>
-                </div>
-              </Card>
-            </div>
+          <SpellingAssessment  assessmentData={assessmentData }
+    onBackToDashboard={handleBackToDashboard} />
           ) : (
-            <UnifiedGameInterface
-              word={currentWord}
-              imageUrl={getWordImage(currentWord.word)}
-              onComplete={handleWordComplete}
-              onBackToDashboard={handleBackToDashboard}
-              isDragMode={useDragDrop}
-              playerName={selectedProfile.name}
-              currentIndex={currentWordIndex}
-              totalWords={currentGrade.words.length}
-              correctAnswers={sessionStats.correctAnswers}
-              totalAttempts={sessionStats.totalAttempts}
-              gradeName={currentGrade.name}
-            />
+    <UnifiedGameInterface
+      words={currentWord}
+      onComplete={({ words }) => {handleWordComplete(words)}}
+      onBackToDashboard={handleBackToDashboard}
+      isDragMode={useDragDrop}
+      playerName={selectedProfile.name}
+      gradeName={currentGrade.name}
+    />
           )
         } />
         <Route path="/demo" element={<DemoTest />} />
       </Routes>
     </Router>
   );
-  }
+}

@@ -1,11 +1,19 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card } from './ui/card';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
 import { User, UserPlus, Eye, EyeOff } from 'lucide-react';
-
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from './ui/dialog';
+import { 
+  getAuth, 
+  createUserWithEmailAndPassword, 
+  sendEmailVerification, 
+  onAuthStateChanged,
+  signInWithEmailAndPassword
+} from 'firebase/auth';
+import { saveUserData } from '../services/api';
 interface User {
   id: string;
   email: string;
@@ -25,11 +33,79 @@ export const Authentication: React.FC<AuthenticationProps> = ({ onAuthSuccess })
   const [formData, setFormData] = useState({
     email: '',
     password: '',
-    name: ''
-    // role: 'parent' as 'parent' | 'teacher' // Removed role from formData
+    name: '' // Removed role field
   });
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
   const [isLoading, setIsLoading] = useState(false);
+  const auth = getAuth();
+  const [showVerificationModal, setShowVerificationModal] = useState(false);
+  const [verificationStatus, setVerificationStatus] = useState('');
+
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      if (user) {
+        // Reload user to get latest email verification status
+        await user.reload();
+        
+        if (user.emailVerified) {
+          setShowVerificationModal(false);
+          onAuthSuccess({
+            id: user.uid,
+            email: user.email || '',
+            name: user.displayName || formData.name,
+            createdAt: new Date().toISOString(),
+            hasSeenTutorial: false
+          });
+        } else if (showVerificationModal) {
+          // User exists but email not verified, keep showing modal
+          setVerificationStatus('Please verify your email to continue.');
+        }
+      }
+    });
+
+    return () => unsubscribe();
+  }, [showVerificationModal]);
+
+  const checkVerificationStatus = () => {
+    const interval = setInterval(async () => {
+      try {
+        await auth.currentUser?.reload();
+        const currentUser = auth.currentUser;
+        
+        if (currentUser?.emailVerified) {
+          clearInterval(interval);
+          setVerificationStatus('Email verified successfully!');
+          setTimeout(async () => {
+            setShowVerificationModal(false);
+            if (currentUser) {
+              onAuthSuccess({
+                id: currentUser.uid,
+                email: currentUser.email || '',
+                name: currentUser.displayName || formData.name,
+                createdAt: new Date().toISOString(),
+                hasSeenTutorial: false
+              });
+            }
+          }, 1500);
+        }
+      } catch (error) {
+        console.error('Error checking verification status:', error);
+      }
+    }, 3000);
+
+    // Clear interval after 5 minutes
+    const timeoutId = setTimeout(() => {
+      clearInterval(interval);
+      setVerificationStatus('Verification timeout. Please try logging in again.');
+      setTimeout(() => setShowVerificationModal(false), 1500);
+    }, 300000);
+
+    // Cleanup function to clear both timers
+    return () => {
+      clearInterval(interval);
+      clearTimeout(timeoutId);
+    };
+  };
 
   const validateEmail = (email: string) => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -62,7 +138,6 @@ export const Authentication: React.FC<AuthenticationProps> = ({ onAuthSuccess })
     if (isSignup && !formData.name) {
       newErrors.name = 'Name is required';
     }
-    // No role validation needed
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -72,54 +147,71 @@ export const Authentication: React.FC<AuthenticationProps> = ({ onAuthSuccess })
     if (!validateForm(false)) return;
 
     setIsLoading(true);
-    
-    // Simulate API call
-    setTimeout(() => {
-      const users = JSON.parse(localStorage.getItem('phonics-users') || '[]');
-      const user = users.find((u: User) => u.email === formData.email);
-      
-      if (user) {
-        localStorage.setItem('phonics-current-user', JSON.stringify(user));
-        onAuthSuccess(user);
+    try {
+      const userCredential = await signInWithEmailAndPassword(
+        auth,
+        formData.email,
+        formData.password
+      );
+
+      if (!userCredential.user.emailVerified) {
+        // Send verification email if not verified
+        await sendEmailVerification(userCredential.user);
+        setShowVerificationModal(true);
+        setVerificationStatus('Email not verified. Verification email sent! Please check your inbox.');
+        checkVerificationStatus();
       } else {
-        setErrors({ email: 'Account not found. Please sign up first.' });
+        // Email is verified, proceed with login
+        onAuthSuccess({
+          id: userCredential.user.uid,
+          email: userCredential.user.email || '',
+          name: userCredential.user.displayName || formData.name,
+          createdAt: new Date().toISOString(),
+          hasSeenTutorial: false
+        });
       }
+    } catch (error: any) {
+      if (error.code === 'auth/invalid-login-credentials') {
+        setErrors({ email: 'Invalid email or password' });
+      } else if (error.code === 'auth/user-not-found') {
+        setErrors({ email: 'Account not found. Please sign up first.' });
+      } else if (error.code === 'auth/wrong-password') {
+        setErrors({ password: 'Incorrect password' });
+      } else {
+        setErrors({ email: error.message });
+      }
+    } finally {
       setIsLoading(false);
-    }, 1000);
+    }
   };
 
   const handleSignup = async () => {
     if (!validateForm(true)) return;
 
     setIsLoading(true);
-
-    // Simulate API call
-    setTimeout(() => {
-      const users = JSON.parse(localStorage.getItem('phonics-users') || '[]');
-      const existingUser = users.find((u: User) => u.email === formData.email);
-      
-      if (existingUser) {
-        setErrors({ email: 'An account with this email already exists' });
-        setIsLoading(false);
-        return;
-      }
-
-      const newUser: User = {
-        id: Date.now().toString(),
-        email: formData.email,
+    try {
+      const userCredential = await createUserWithEmailAndPassword(
+        auth,
+        formData.email,
+        formData.password
+      );
+      await saveUserData({
+        email: userCredential.user.email,
         name: formData.name,
-        // role: formData.role, // Removed role
-        createdAt: new Date().toISOString(),
-        hasSeenTutorial: false
-      };
-
-      users.push(newUser);
-      localStorage.setItem('phonics-users', JSON.stringify(users));
-      localStorage.setItem('phonics-current-user', JSON.stringify(newUser));
-      
-      onAuthSuccess(newUser);
+      });
+      await sendEmailVerification(userCredential.user);
+      setShowVerificationModal(true);
+      setVerificationStatus('Verification email sent! Please check your inbox.');
+      checkVerificationStatus();
+    } catch (error: any) {
+      if (error.code === 'auth/email-already-in-use') {
+        setErrors({ email: 'An account with this email already exists' });
+      } else {
+        setErrors({ email: error.message });
+      }
+    } finally {
       setIsLoading(false);
-    }, 1000);
+    }
   };
 
   return (
@@ -316,9 +408,25 @@ export const Authentication: React.FC<AuthenticationProps> = ({ onAuthSuccess })
           </Tabs>
 
           <div className="text-center mt-6 text-sm text-gray-600">
-            <p>🔒 Your data is safely stored locally on your device</p>
+            <p>🔒 Your data is safely stored and protected</p>
           </div>
         </Card>
+
+        <Dialog open={showVerificationModal} onOpenChange={setShowVerificationModal}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Email Verification Required</DialogTitle>
+              <DialogDescription className="space-y-4">
+                <p>{verificationStatus || 'Please check your email for a verification link.'}</p>
+                {!auth.currentUser?.emailVerified && (
+                  <p className="text-sm text-gray-500">
+                    Didn't receive the email? You can close this dialog and try signing up again.
+                  </p>
+                )}
+              </DialogDescription>
+            </DialogHeader>
+          </DialogContent>
+        </Dialog>
       </div>
     </div>
   );

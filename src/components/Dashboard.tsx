@@ -8,6 +8,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { gradeLevels } from '../data/words';
 import { Plus, User, BookOpen, Trophy, Calendar, HelpCircle, LogOut, Settings } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { addChild, fetchChild } from '../services/api';
 
 interface User {
   id: string;
@@ -48,48 +49,87 @@ export const Dashboard: React.FC<DashboardProps> = ({
   const [selectedGradeLevel, setSelectedGradeLevel] = useState(0);
   const navigate = useNavigate();
   const [newProfile, setNewProfile] = useState({
-  name: '',
-  age: ''
+    name: '',
+    age: '',
+    gradeLevel: 0
   });
-
-  useEffect(() => {
-    loadProfiles();
-  }, []);
-
-  const loadProfiles = () => {
+ 
+useEffect(() => {
+  const loadChildren = async () => {
+    try {
     const savedProfiles = localStorage.getItem('phonics-profiles');
     if (savedProfiles) {
       setProfiles(JSON.parse(savedProfiles));
+    } else {
+      const data = await fetchChild(); 
+      // API returns array directly
+      if (Array.isArray(data)) {
+        const mappedProfiles: PlayerProfile[] = data.map((child) => {
+          const gradeIndex = gradeLevels.findIndex(
+            (g) => g.name.toLowerCase() === child.grade.toLowerCase()
+          );
+
+          return {
+            id: child.child_id, // use backend id
+            name: child.name,
+            age: child.age,
+            gradeLevel: gradeIndex !== -1 ? gradeIndex : 0,
+            wordsCompleted: 0,
+            totalWordsAttempted: 0,
+            averageAccuracy: 0,
+            lastPlayed: new Date().toISOString(),
+          };
+        });
+        localStorage.setItem('phonics-profiles', JSON.stringify(mappedProfiles));
+        setProfiles(mappedProfiles);
+      } else {
+        console.warn("Unexpected fetchChild response", data);
+      }
+    }
+    } catch (err) {
+      console.error("Failed to fetch children:", err);
     }
   };
+
+  loadChildren();
+}, []);
 
   const saveProfiles = (updatedProfiles: PlayerProfile[]) => {
     localStorage.setItem('phonics-profiles', JSON.stringify(updatedProfiles));
     setProfiles(updatedProfiles);
   };
 
-  const handleAddProfile = () => {
-    const ageNum = parseInt(newProfile.age);
-    if (!newProfile.name) return;
-    if (!ageNum || ageNum < 4 || ageNum > 10) {
-      alert('Only children aged between 4 and 10 can create a profile.');
-      return;
-    }
-    const profile: PlayerProfile = {
-      id: Date.now().toString(),
-      name: newProfile.name,
-      age: ageNum,
-      gradeLevel: 0, // Default, will be set before starting test
-      wordsCompleted: 0,
-      totalWordsAttempted: 0,
-      averageAccuracy: 0,
-      lastPlayed: new Date().toISOString()
-    };
+  const handleAddProfile = async () => {
+    if (newProfile.name && newProfile.age) {
+      try {
+        // Call the API to add child
+        await addChild({
+          name: newProfile.name,
+          age: parseInt(newProfile.age),
+          grade: gradeLevels[newProfile.gradeLevel].name
+        });
 
-    const updatedProfiles = [...profiles, profile];
-    saveProfiles(updatedProfiles);
-    setNewProfile({ name: '', age: '' });
-    setShowAddProfile(false);
+        // Create local profile after successful API call
+        const profile: PlayerProfile = {
+          id: Date.now().toString(),
+          name: newProfile.name,
+          age: parseInt(newProfile.age),
+          gradeLevel: newProfile.gradeLevel,
+          wordsCompleted: 0,
+          totalWordsAttempted: 0,
+          averageAccuracy: 0,
+          lastPlayed: new Date().toISOString()
+        };
+
+        const updatedProfiles = [...profiles, profile];
+        saveProfiles(updatedProfiles);
+        setNewProfile({ name: '', age: '', gradeLevel: 0 });
+        setShowAddProfile(false);
+      } catch (error) {
+        console.error('Error adding child profile:', error);
+        // You might want to show an error message to the user here
+      }
+    }
   };
 
   const handleDeleteProfile = (profileId: string) => {
@@ -120,7 +160,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
           <div className="flex items-center gap-4">
             <div className="text-6xl animate-gentle-float">🦉</div>
             <div>
-              <h1 className="text-4xl font-bold text-purple-800">Phonics Fun Dashboard</h1>
+              <h1 className="text-4xl font-bold text-purple-800"> Dashboard</h1>
               <p className="text-purple-600">Welcome back, {currentUser.name}! 👋</p>
             </div>
           </div>
@@ -190,6 +230,21 @@ export const Dashboard: React.FC<DashboardProps> = ({
                           className="rounded-xl border-2 border-purple-200"
                         />
                       </div>
+                      <div>
+                        <Label>Grade Level</Label>
+                        <Select onValueChange={(value) => setNewProfile({...newProfile, gradeLevel: parseInt(value)})}>
+                          <SelectTrigger className="rounded-xl border-2 border-purple-200">
+                            <SelectValue placeholder="Select grade level" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {gradeLevels.map((grade, index) => (
+                              <SelectItem key={index} value={index.toString()}>
+                                {grade.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
                       <Button 
                         onClick={handleAddProfile}
                         className="w-full bg-purple-500 hover:bg-purple-600 rounded-2xl h-12"
@@ -228,7 +283,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
                           <div>
                             <h3 className="text-xl font-bold text-purple-800">{profile.name}</h3>
                             <p className="text-purple-600">
-                              Age {profile.age} • {gradeLevels[profile.gradeLevel]?.name}
+                              Age {profile.age} •  Grade : {gradeLevels[profile.gradeLevel]?.name}
                             </p>
                           </div>
                         </div>
@@ -244,24 +299,24 @@ export const Dashboard: React.FC<DashboardProps> = ({
                           >
                             Delete
                           </Button>
-                          <div className="text-right">
-                            <div className="grid grid-cols-2 gap-4">
-                              <div className="bg-green-100 rounded-xl p-2 text-center">
-                                <div className="text-lg font-bold text-green-600">{profile.wordsCompleted}</div>
-                                <div className="text-xs text-green-800">Words</div>
-                              </div>
-                              <div className="bg-blue-100 rounded-xl p-2 text-center">
-                                <div className="text-lg font-bold text-blue-600">
-                                  {Math.round(profile.averageAccuracy || 0)}%
-                                </div>
-                                <div className="text-xs text-blue-800">Score</div>
-                              </div>
+                        {/* <div className="text-right">
+                          <div className="grid grid-cols-2 gap-4">
+                            <div className="bg-green-100 rounded-xl p-2 text-center">
+                              <div className="text-lg font-bold text-green-600">{profile.wordsCompleted}</div>
+                              <div className="text-xs text-green-800">Words</div>
                             </div>
-                            <p className="text-xs text-gray-500 mt-2">
-                              <Calendar className="w-3 h-3 inline mr-1" />
-                              {formatLastPlayed(profile.lastPlayed)}
-                            </p>
+                            <div className="bg-blue-100 rounded-xl p-2 text-center">
+                              <div className="text-lg font-bold text-blue-600">
+                                {Math.round(profile.averageAccuracy || 0)}%
+                              </div>
+                              <div className="text-xs text-blue-800">Score</div>
+                            </div>
                           </div>
+                          <p className="text-xs text-gray-500 mt-2">
+                            <Calendar className="w-3 h-3 inline mr-1" />
+                            {formatLastPlayed(profile.lastPlayed)}
+                          </p>
+                          </div> */}
                         </div>
                       </div>
                     </div>
@@ -300,9 +355,6 @@ export const Dashboard: React.FC<DashboardProps> = ({
                           <SelectItem key={index} value={index.toString()}>
                             <div className="flex items-center gap-2">
                               <span>{grade.name}</span>
-                              <span className="text-xs text-gray-500">
-                                ({grade.words.length} words)
-                              </span>
                             </div>
                           </SelectItem>
                         ))}
@@ -357,7 +409,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
             </Card>
 
             {/* Quick Stats */}
-            {selectedProfile && (
+            {/* {selectedProfile && (
               <Card className="p-4 mt-4 bg-white/95 backdrop-blur border-4 border-green-200 rounded-3xl shadow-xl">
                 <h3 className="font-bold text-green-800 mb-3 flex items-center gap-2">
                   <Trophy className="w-5 h-5" />
@@ -378,7 +430,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
                   </div>
                 </div>
               </Card>
-            )}
+            )} */}
           </div>
         </div>
       </div>

@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { gradeLevels } from '../data/words';
+import { gradeLevels, Word } from '../data/words';
 import { UnifiedGameInterface } from './UnifiedGameInterface';
 import { Card } from './ui/card';
 import { Button } from './ui/button';
@@ -11,6 +11,7 @@ import {
   FaRedoAlt as FaRedoAltIcon,
   FaHome as FaHomeIcon,
 } from "react-icons/fa";
+import { submitGrade, WordResponse } from '../services/api';
 
 // Typed aliases to fix TS2786 errors
 const Smile = FaSmileIcon as unknown as React.FC<React.SVGProps<SVGSVGElement>>;
@@ -26,100 +27,125 @@ export const DemoTest: React.FC = () => {
   const [step, setStep] = useState(0);
   const [correctAnswers, setCorrectAnswers] = useState(0);
   const [totalAttempts, setTotalAttempts] = useState(0);
-  const [demoWords, setDemoWords] = useState(() => {
-    // Pick 3 random words from the selected grade
-    const words = gradeLevels[gradeLevel]?.words || [];
-    if (words.length <= 3) return words;
-    const shuffled = [...words].sort(() => Math.random() - 0.5);
-    return shuffled.slice(0, 3);
-  });
+  const [demoWords, setDemoWords] = useState<Word[]>([]);
   const [showHomeModal, setShowHomeModal] = useState(false);
-
-  // Track results for summary
+  const [isLoading, setIsLoading] = useState(true);
   const [results, setResults] = useState<{ word: string; correct: boolean; correctWord: string }[]>([]);
-
-  const handleComplete = (success: boolean) => {
-    setStep((prev) => prev + 1);
-    setTotalAttempts((prev) => prev + 1);
-    if (success) setCorrectAnswers((prev) => prev + 1);
-    setResults(prev => [...prev, { word: demoWords[step].word, correct: success, correctWord: demoWords[step].word }]);
+  const [showCompleteModal, setShowCompleteModal] = useState(false);
+  // Function to get random indices
+  const getRandomIndices = (array: any[], count: number) => {
+    const indices = Array.from({ length: array.length }, (_, i) => i);
+    for (let i = indices.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [indices[i], indices[j]] = [indices[j], indices[i]];
+    }
+    return indices.slice(0, count);
   };
 
-  const handleDemoAgain = () => {
-    const words = gradeLevels[gradeLevel]?.words || [];
-    const shuffled = [...words].sort(() => Math.random() - 0.5);
-    setDemoWords(shuffled.slice(0, 3));
-    setStep(0);
-    setCorrectAnswers(0);
-    setTotalAttempts(0);
-    setResults([]);
+  // Initialize demo words
+  useEffect(() => {
+    const initializeDemoWords = async () => {
+      setIsLoading(true);
+      try {
+        const gradeName = gradeLevels[gradeLevel].name.replace(/ grade$/i, '').trim();
+        const response = await submitGrade(gradeName) || { words: [] };
+        const wordsArray = response.words || [];
+        const randomIndices = getRandomIndices(wordsArray, 3);
+        const selectedWords = randomIndices.map(index => wordsArray[index]);
+        setDemoWords(selectedWords);
+      } catch (error) {
+        console.error('Error initializing demo words:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
+    initializeDemoWords();
+  }, [gradeLevel]);
+
+  const handleComplete = () => {
+    setShowCompleteModal(true);
+  };
+
+  const handleDemoAgain = async () => {
+    setIsLoading(true);
+    setShowCompleteModal(false);
+    try {
+      const gradeName = gradeLevels[gradeLevel].name.replace(/ grade$/i, '').trim();
+      const response = await submitGrade(gradeName) || { words: [] };
+      const wordsArray = response.words || [];
+      const randomIndices = getRandomIndices(wordsArray, 3);
+      const selectedWords = randomIndices.map(index => wordsArray[index]);
+      setDemoWords(selectedWords);
+      setStep(0);
+      setCorrectAnswers(0);
+      setTotalAttempts(0);
+      setResults([]);
+    } catch (error) {
+      console.error('Error getting new demo words:', error);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleHomeClick = () => {
     setShowHomeModal(true); // Show modal instead of navigating
   };
 
-  if (step >= demoWords.length) {
-    // Show summary with correct/incorrect icons
+
+  if (isLoading) {
     return (
-      <Card className="max-w-md mx-auto mt-12 p-8 border-4 border-green-300 rounded-3xl shadow-2xl text-center">
-        <h2 className="text-3xl font-bold text-green-800 mb-4">Demo Complete!</h2>
-        <div className="grid grid-cols-1 gap-4 mb-4">
-          {results.map((item, idx) => (
-            <div key={idx} className="flex items-center gap-3 p-3 rounded-xl border-2 border-gray-200 bg-gray-50">
-              <span className={`text-2xl ${item.correct ? 'text-green-500' : 'text-red-500'}`}>{item.correct ? '✅' : '❌'}</span>
-              <span className="font-bold text-lg">{item.word}</span>
-              {!item.correct && <span className="text-gray-500 ml-2">Correct: <span className="font-mono">{item.correctWord}</span></span>}
-            </div>
-          ))}
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="inline-block animate-spin rounded-full h-12 w-12 border-4 border-yellow-500 border-t-transparent"></div>
+          <p className="mt-4 text-lg text-gray-600">Loading demo words...</p>
         </div>
-        <div className="flex justify-center gap-2 mb-4">
-          {Array.from({ length: demoWords.length }, (_, i) => (
-            <Star
-              key={i}
-              className={`text-3xl ${i < correctAnswers ? "text-yellow-400" : "text-gray-300"}`}
-            />
-          ))}
-        </div>
-        <p className="mb-4 text-lg font-medium">
-          You answered {correctAnswers} out of {demoWords.length} correctly.
-        </p>
-        <Button
-          className="bg-yellow-500 hover:bg-yellow-600 rounded-xl text-lg font-semibold flex items-center justify-center gap-2"
-          onClick={handleDemoAgain}
-        >
-          <Redo /> Take Demo Again
-        </Button>
-      </Card>
+      </div>
     );
   }
 
-  const currentWord = demoWords[step];
-  if (!currentWord) {
+  if (!demoWords || demoWords.length === 0) {
     return (
       <Card className="max-w-md mx-auto mt-12 p-8 border-4 border-red-300 rounded-3xl shadow-2xl text-center">
         <h2 className="text-2xl font-bold text-red-800 mb-4">No Demo Words Found</h2>
-        <Button onClick={handleHomeClick}>Back to Dashboard</Button>
+        <Button className="bg-yellow-500 hover:bg-yellow-600 rounded-xl text-lg font-semibold flex items-center justify-center gap-2" onClick={handleHomeClick}>Back to Dashboard</Button>
       </Card>
     );
   }
 
   // Use drag mode for kindergarten, writing for others
   const isDragMode = gradeLevel === 0;
+  if (showCompleteModal) {
+    return (
+            <Card className="max-w-md mx-auto mt-12 p-8 border-4 border-green-300 rounded-3xl shadow-2xl text-center z-50">
+        <h2 className="text-3xl font-bold text-green-800 mb-4">Demo Complete!</h2>
+        <Button
+          className="bg-yellow-500 hover:bg-yellow-600 rounded-xl text-lg font-semibold flex items-center justify-center gap-2"
+          onClick={handleDemoAgain}
+        >
+          <Redo /> Take Demo Again
+        </Button>
+                <Button
+          className="bg-yellow-500 hover:bg-yellow-600 rounded-xl text-lg font-semibold flex items-center justify-center gap-2"
+            onClick={() => {
+    navigate('/');
+  }}
+        >
+           Go to Dashboard
+        </Button>
+      </Card>
+    );
+  }
 
   return (
     <div className={`min-h-screen ${showHomeModal ? 'bg-gray-200' : 'bg-white'}`}>
       <UnifiedGameInterface
-        word={currentWord}
-        imageUrl={''} // Optionally use currentWord.imageQuery with an image fetcher
+        words={demoWords}
+        // Optionally use currentWord.imageQuery with an image fetcher
         onComplete={handleComplete}
         onBackToDashboard={handleHomeClick} // Updated to show modal
         isDragMode={isDragMode}
         playerName={''}
-        currentIndex={step}
-        totalWords={demoWords.length}
-        correctAnswers={correctAnswers}
-        totalAttempts={totalAttempts}
         gradeName={gradeLevels[gradeLevel]?.name || ''}
       />
       {/* Full-screen centered modal */}

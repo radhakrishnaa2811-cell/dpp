@@ -26,7 +26,7 @@ const tutorialSteps: TutorialStep[] = [
     title: "Meet Olly, Your Learning Buddy!",
     description: "Hi there! I'm Olly the Owl, and I'm here to help you learn phonics and spelling in a fun way!",
     owlExpression: "👋",
-    owlMessage: "Welcome to Phonics Fun! I'm so excited to be your learning buddy on this amazing adventure!",
+    owlMessage: "Welcome! I'm so excited to be your learning buddy on this amazing adventure!",
     tips: [
       "Olly will guide you through every step",
       "Click the speaker button to hear words",
@@ -103,25 +103,52 @@ export const InteractiveTutorial: React.FC<TutorialProps> = ({ onComplete, onSki
   const [currentStep, setCurrentStep] = useState(0);
   const [isAutoSpeaking, setIsAutoSpeaking] = useState(true);
   const [showDemo, setShowDemo] = useState(false);
+  const [voices, setVoices] = useState<SpeechSynthesisVoice[]>([]);
+  const [voicesLoaded, setVoicesLoaded] = useState(false);
 
   const step = tutorialSteps[currentStep];
   const progress = ((currentStep + 1) / tutorialSteps.length) * 100;
 
   useEffect(() => {
-    if (isAutoSpeaking) {
+    if (isAutoSpeaking && voicesLoaded) {
       setTimeout(() => speakMessage(step.owlMessage), 1000);
     }
-  }, [currentStep, isAutoSpeaking, step.owlMessage]);
+  }, [currentStep, isAutoSpeaking, step.owlMessage, voicesLoaded]);
 
-  const speakMessage = (message: string) => {
-    if ('speechSynthesis' in window) {
-      speechSynthesis.cancel();
-      const cleanMessage = message.replace(/[^\w\s.,!?]/g, '').replace(/\s+/g, ' ').trim();
-      if (cleanMessage) {
-        const utterance = new SpeechSynthesisUtterance(cleanMessage);
-        const voices = speechSynthesis.getVoices();
-        const ukVoice = voices.find(voice => voice.lang.includes('en-GB')) || voices[0];
-        if (ukVoice) utterance.voice = ukVoice;
+  useEffect(() => {
+    const loadVoices = () => {
+      return new Promise<SpeechSynthesisVoice[]>((resolve) => {
+        let voices = speechSynthesis.getVoices();
+        if (voices.length > 0) {
+          resolve(voices);
+        } else {
+          speechSynthesis.onvoiceschanged = () => {
+            voices = speechSynthesis.getVoices();
+            resolve(voices);
+          };
+        }
+      });
+    };
+
+    loadVoices().then((availableVoices) => {
+      setVoices(availableVoices);
+      setVoicesLoaded(true);
+    });
+  }, []);
+
+  const speakMessage = async (message: string) => {
+    if (!voicesLoaded || !('speechSynthesis' in window)) return;
+
+    speechSynthesis.cancel();
+    const cleanMessage = message.replace(/[^\w\s.,!?]/g, '').replace(/\s+/g, ' ').trim();
+    if (cleanMessage) {
+      const utterance = new SpeechSynthesisUtterance(cleanMessage);
+      const ukVoice = voices.find(voice => 
+        voice.lang.includes('en-GB') && voice.name.includes('Female')
+      ) || voices.find(voice => voice.lang.includes('en-GB')) || voices[0];
+      
+      if (ukVoice) {
+        utterance.voice = ukVoice;
         utterance.rate = 0.9;
         utterance.pitch = 1.2;
         speechSynthesis.speak(utterance);
