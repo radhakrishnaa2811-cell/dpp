@@ -220,12 +220,6 @@ export const Authentication: React.FC<AuthenticationProps> = ({ onAuthSuccess })
         {/* Welcome Header */}
         <div className="text-center mb-8">
           <div className="text-9xl mb-4 animate-float">🦉</div>
-          <h1 className="text-4xl font-bold text-white mb-2 drop-shadow-lg">
-            Welcome to Phonics Fun!
-          </h1>
-          <p className="text-white/90 text-lg drop-shadow">
-            Where learning to read becomes an adventure! 📚✨
-          </p>
         </div>
 
         <Card className="p-8 bg-white/95 backdrop-blur border-4 border-white rounded-3xl shadow-2xl">
@@ -250,7 +244,6 @@ export const Authentication: React.FC<AuthenticationProps> = ({ onAuthSuccess })
             <TabsContent value="login" className="space-y-4">
               <div className="text-center mb-6">
                 <h2 className="text-2xl font-bold text-purple-800">Welcome Back!</h2>
-                <p className="text-purple-600">Ready to continue the learning adventure?</p>
               </div>
 
               <div className="space-y-4">
@@ -321,7 +314,7 @@ export const Authentication: React.FC<AuthenticationProps> = ({ onAuthSuccess })
             <TabsContent value="signup" className="space-y-4">
               <div className="text-center mb-6">
                 <h2 className="text-2xl font-bold text-purple-800">Join the Adventure!</h2>
-                <p className="text-purple-600">Create your account to start learning</p>
+                <p className="text-purple-600">Create your account to start your journey</p>
               </div>
 
               <div className="space-y-4">

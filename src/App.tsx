@@ -247,24 +247,6 @@ const handleWordComplete = async (results: Array<{ word: string; user_input: str
           (currentView === 'auth' || !currentUser) ? (
             <div>
               <Authentication onAuthSuccess={handleAuthSuccess} />
-              <div className="flex justify-center mt-4">
-                <button
-                  className="bg-gray-300 hover:bg-gray-400 text-gray-800 font-semibold py-2 px-4 rounded-xl shadow"
-                  onClick={() => {
-                    const guestUser = {
-                      id: 'guest',
-                      email: '',
-                      name: 'Guest',
-                      createdAt: new Date().toISOString(),
-                      hasSeenTutorial: true
-                    };
-                    setCurrentUser(guestUser);
-                    setCurrentView('dashboard');
-                  }}
-                >
-                  Skip Sign In
-                </button>
-              </div>
             </div>
           ) : (currentView === 'tutorial') ? (
       <InteractiveTutorial

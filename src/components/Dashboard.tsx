@@ -106,11 +106,13 @@ useEffect(() => {
     if (newProfile.name && newProfile.age) {
       try {
         // Call the API to add child
+        if (currentUser.id !=='guest'){
         await addChild({
           name: newProfile.name,
           age: parseInt(newProfile.age),
           grade: gradeLevels[newProfile.gradeLevel].name
         });
+      }
 
         // Create local profile after successful API call
         const profile: PlayerProfile = {
@@ -194,7 +196,7 @@ useEffect(() => {
               className="rounded-2xl btn-bouncy"
             >
               <LogOut className="w-4 h-4 mr-2" />
-              Logout
+              {currentUser.id !== 'guest' ? 'Logout' : 'Login'}
             </Button>
           </div>
         </div>
@@ -345,7 +347,7 @@ useEffect(() => {
             <Card className="p-6 bg-white/95 backdrop-blur border-4 border-blue-200 rounded-3xl shadow-xl">
               <h2 className="text-2xl font-bold text-blue-800 mb-6 flex items-center gap-2">
                 <BookOpen className="w-6 h-6" />
-                Start Learning
+                Start Test
               </h2>
 
               {selectedProfile ? (
@@ -406,18 +408,18 @@ useEffect(() => {
 
                   <Button
                     onClick={() => onStartGame(selectedProfile, selectedGradeLevel)}
-                    disabled={gradeLevels[selectedGradeLevel] === undefined}
+                    disabled={gradeLevels[selectedGradeLevel] === undefined || currentUser.id ==='guest'}
                     className="w-full h-12 bg-blue-500 hover:bg-blue-600 rounded-2xl btn-bouncy text-white"
                     size="lg"
                   >
-                    Start Adventure! 🚀
+                    Start Test 🚀
                   </Button>
                 </div>
               ) : (
                 <div className="text-center py-8">
                   <div className="text-5xl mb-4 animate-gentle-float">🎯</div>
                   <h3 className="text-lg font-semibold text-gray-600 mb-2">Choose a Profile</h3>
-                  <p className="text-gray-500 text-sm">Select a child's profile to start learning</p>
+                  <p className="text-gray-500 text-sm">Select a child's profile to start Test</p>
                 </div>
               )}
             </Card>
