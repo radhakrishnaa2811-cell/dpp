@@ -1,5 +1,4 @@
 import axios from 'axios';
-import { Result } from 'ethers/lib/utils';
 import { getAuth, onAuthStateChanged, User } from "firebase/auth";
 
 const api = axios.create({
