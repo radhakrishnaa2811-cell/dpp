@@ -47,6 +47,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
   const [showAddProfile, setShowAddProfile] = useState(false);
   const [selectedProfile, setSelectedProfile] = useState<PlayerProfile | null>(null);
   const [selectedGradeLevel, setSelectedGradeLevel] = useState(0);
+  const [isLoading, setIsLoading] = useState(true);
   const navigate = useNavigate();
   const [newProfile, setNewProfile] = useState({
     name: '',
@@ -56,6 +57,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
  
 useEffect(() => {
   const loadChildren = async () => {
+    setIsLoading(true);
     try {
     const savedProfiles = localStorage.getItem('phonics-profiles');
     if (savedProfiles) {
@@ -89,6 +91,7 @@ useEffect(() => {
     } catch (err) {
       console.error("Failed to fetch children:", err);
     }
+    setIsLoading(false);
   };
 
   loadChildren();
@@ -151,6 +154,17 @@ useEffect(() => {
     if (diffDays <= 7) return `${diffDays - 1} days ago`;
     return date.toLocaleDateString();
   };
+    
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="inline-block animate-spin rounded-full h-12 w-12 border-4 border-yellow-500 border-t-transparent"></div>
+          <p className="mt-4 text-lg text-gray-600">Loading Dashboard...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen p-6">

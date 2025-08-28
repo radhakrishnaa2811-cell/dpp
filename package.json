@@ -40,6 +40,7 @@
     "class-variance-authority": "^0.7.1",
     "cmdk": "^1.1.1",
     "embla-carousel-react": "^8.6.0",
+    "express": "^5.1.0",
     "firebase": "^12.1.0",
     "input-otp": "^1.4.2",
     "lucide-react": "^0.539.0",
@@ -62,7 +63,7 @@
     "web-vitals": "^2.1.4"
   },
   "scripts": {
-    "start": "react-scripts start",
+    "start": "node server.js",
     "build": "react-scripts build",
     "test": "react-scripts test",
     "eject": "react-scripts eject"

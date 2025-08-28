@@ -72,6 +72,7 @@ export default function App() {
   const currentGrade = gradeLevels[selectedGradeLevel];
   const apiWord = wordsList;
   const currentWord = apiWord;
+    const [isLoading, setIsLoading] = useState(false);
   
   // Determine if we should use drag-drop (Kindergarden) or writing (1st+ grade)
   const useDragDrop = selectedGradeLevel === 0; // Kindergarden uses drag-drop
@@ -131,6 +132,7 @@ export default function App() {
 
   const handleStartGame = async (profile: PlayerProfile, gradeLevel: number) => {
     try {
+      setIsLoading(true);
       setSelectedProfile(profile);
       setSelectedGradeLevel(gradeLevel);
       
@@ -146,6 +148,7 @@ export default function App() {
       // Reset game state
       setCurrentWordIndex(0);
       setGameState('playing');
+      setIsLoading(false);
       setSessionStats({
         wordsCompleted: 0,
         totalAttempts: 0,
@@ -224,6 +227,17 @@ const handleWordComplete = async (results: Array<{ word: string; user_input: str
       console.error('Error signing out:', error);
     }
   };
+
+    if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="inline-block animate-spin rounded-full h-12 w-12 border-4 border-yellow-500 border-t-transparent"></div>
+          <p className="mt-4 text-lg text-gray-600">Loading ...</p>
+        </div>
+      </div>
+    );
+  }
 
   // ...existing code...
     return (

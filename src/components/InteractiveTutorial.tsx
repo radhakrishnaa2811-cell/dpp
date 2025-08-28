@@ -23,27 +23,25 @@ interface TutorialStep {
 const tutorialSteps: TutorialStep[] = [
   {
     id: 1,
-    title: "Meet Olly, Your Learning Buddy!",
-    description: "Hi there! I'm Olly the Owl, and I'm here to help you learn phonics and spelling in a fun way!",
+    title: "Meet Olly, Your Buddy!",
+    description: "Hi there! I'm Olly the Owl, and I'm here to help you with your test!",
     owlExpression: "👋",
-    owlMessage: "Welcome! I'm so excited to be your learning buddy on this amazing adventure!",
+    owlMessage: "Welcome! I'm so excited to be your buddy on this amazing adventure!",
     tips: [
       "Olly will guide you through every step",
       "Click the speaker button to hear words",
-      "Don't worry about making mistakes - they help us learn!"
     ]
   },
   {
     id: 2,
-    title: "How We Learn Together",
-    description: "We'll look at pictures, listen to words, and build them using sounds called phonemes!",
+    title: "How We will start test Together",
+    description: "We'll look at pictures, listen to words, and build them !",
     owlExpression: "🎵",
-    owlMessage: "Every word is made of special sounds called phonemes. We'll learn to hear them and put them together!",
+    owlMessage: "Every word is made of special sounds called phonemes. We'll  hear them and put them together!",
     demonstration: 'audio',
     tips: [
       "Listen carefully to each word",
       "Look at the picture for clues",
-      "Take your time - learning is not a race!"
     ]
   },
   {
@@ -55,8 +53,6 @@ const tutorialSteps: TutorialStep[] = [
     demonstration: 'drag-drop',
     tips: [
       "Drag sound blocks to the empty spaces",
-      "Each color represents a different type of sound",
-      "Green = correct, try different combinations!"
     ]
   },
   {
@@ -64,20 +60,19 @@ const tutorialSteps: TutorialStep[] = [
     title: "For Bigger Learners (1st & 2nd Grade)",
     description: "Older students will type the words they hear using the keyboard!",
     owlExpression: "✏️",
-    owlMessage: "Listen to the word, then type what you hear. I'll give you hints if you need help!",
+    owlMessage: "Listen to the word, then type what you hear.",
     demonstration: 'writing',
     tips: [
       "Type the word you hear in the text box",
       "Don't worry about capital letters",
-      "Use the hint system if you get stuck"
     ]
   },
   {
     id: 5,
-    title: "Track Your Amazing Progress",
-    description: "Watch your progress as you complete words and celebrate your achievements!",
+    title: "Track Your  Test Results",
+    description: "Watch your Result as you complete All words.",
     owlExpression: "⭐",
-    owlMessage: "I love watching you grow as a reader! Every word you complete makes you stronger!",
+    owlMessage: "I love helping you to complete the test!",
     demonstration: 'progress',
     tips: [
       "Colorful dots show your progress through each level",
@@ -88,13 +83,11 @@ const tutorialSteps: TutorialStep[] = [
   {
     id: 6,
     title: "You're Ready to Start!",
-    description: "Now you know everything you need! Are you ready to start your phonics adventure?",
+    description: "Now you know everything you need! Are you ready to start your test adventure?",
     owlExpression: "🎉",
-    owlMessage: "You're going to do amazing! Remember, I'm always here to help. Let's start learning together!",
+    owlMessage: "You're going to do amazing! Remember, I'm always here to help. Let's start  together!",
     tips: [
       "Have fun and don't worry about mistakes",
-      "Ask for help whenever you need it",
-      "Celebrate every success, big or small!"
     ]
   }
 ];
@@ -283,7 +276,7 @@ export const InteractiveTutorial: React.FC<TutorialProps> = ({ onComplete, onSki
         {/* Header */}
         <div className="text-center mb-8">
           <h1 className="text-4xl font-bold text-white mb-4 drop-shadow-lg">
-            🎓 How to Use Phonics Fun!
+            🎓 How to Start test!
           </h1>
           <div className="flex items-center justify-center gap-4 mb-4">
             <Button onClick={onSkip} variant="outline" className="bg-white/80 hover:bg-white rounded-2xl">

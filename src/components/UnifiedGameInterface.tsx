@@ -135,6 +135,9 @@ export const UnifiedGameInterface: React.FC<UnifiedGameInterfaceProps> = ({
   const speakWord = () => {
     speakText(currentWord.word, { rate: 0.85, pitch: 1.0 });
   };
+  const speakSentence = () => {
+    speakText(currentWord.sentence, { rate: 0.85, pitch: 1.0 });
+  };
 
   const speakPrompt = (msg: string) => {
     speakText(msg, { rate: 0.95, pitch: 1.1 });
@@ -180,10 +183,12 @@ export const UnifiedGameInterface: React.FC<UnifiedGameInterfaceProps> = ({
     if (isAutoSpeaking) {
       // small delay so voices initialize on some browsers
       const t1 = setTimeout(() => speakWord(), 400);
-      const t2 = setTimeout(() => speakPrompt(msg), 1200);
+      const t2 = setTimeout(() => speakSentence(), 800);
+      const t3 = setTimeout(() => speakPrompt(msg), 1200);
       return () => {
         clearTimeout(t1);
         clearTimeout(t2);
+        clearTimeout(t3)
         // stop any queued speech when switching words
         if ('speechSynthesis' in window) window.speechSynthesis.cancel();
       };
@@ -308,7 +313,11 @@ export const UnifiedGameInterface: React.FC<UnifiedGameInterfaceProps> = ({
                 <div className="flex justify-center gap-2 mt-3">
                   <Button onClick={speakWord} size="lg" className="bg-blue-500 hover:bg-blue-600 btn-bouncy" title="Play the word">
                     <Volume2 className="w-4 h-4" />
-                    Play
+                    Play Word
+                  </Button>
+                  <Button onClick={speakSentence} size="lg" className="bg-blue-500 hover:bg-blue-600 btn-bouncy" title="Play the word">
+                    <Volume2 className="w-4 h-4" />
+                    Play Sentence
                   </Button>
                   <Button onClick={handleReset} size="lg" variant="outline" className="btn-bouncy" title="Reset input">
                     <RotateCcw className="w-4 h-4" />
