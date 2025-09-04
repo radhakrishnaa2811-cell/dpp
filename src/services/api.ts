@@ -49,7 +49,7 @@ export interface WordResponse {
 
 export async function submitGrade(gradeName: string) {
     try {
-        const response = await api.post('/grade', { grade:gradeName });
+        const response = await api.post('/grade/', { grade:gradeName });
         return response.data;
     } catch (error) {
         console.error('Error fetching words:', error);
@@ -78,7 +78,7 @@ export async function saveUserData( userDetails: Record<string, any>) {
             const auth = getAuth();
             const user = auth.currentUser;
             const idToken = await user?.getIdToken();
-            const response = await api.post('/add_child', {
+            const response = await api.post('/add_child/', {
                 idToken,
                 name: child.name,
                 age: child.age,
@@ -95,7 +95,7 @@ export async function saveUserData( userDetails: Record<string, any>) {
              const auth = getAuth();
             const user = auth.currentUser;
             const idToken = await user?.getIdToken();
-            const response = await api.post('/submit_words', {
+            const response = await api.post('/submit_words/', {
                 idToken: idToken,
                 child_id: childId,
                 words: results,
@@ -112,7 +112,7 @@ export async function saveUserData( userDetails: Record<string, any>) {
         try {
          
             const idToken = await getIdTokenSafe();
-            const response = await api.post('/get_children', {
+            const response = await api.post('/get_children/', {
                 idToken: idToken,
             });
             console.log("response from fetch child", response.data);

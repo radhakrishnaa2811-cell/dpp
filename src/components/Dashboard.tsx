@@ -55,6 +55,14 @@ export const Dashboard: React.FC<DashboardProps> = ({
     gradeLevel: 0
   });
  
+  useEffect(() => {
+    if (selectedProfile) {
+      setSelectedGradeLevel(selectedProfile.gradeLevel);
+    } else {
+      setSelectedGradeLevel(-1); // Reset when no profile is selected
+    }
+  }, [selectedProfile]);
+
 useEffect(() => {
   const loadChildren = async () => {
     setIsLoading(true);
@@ -360,7 +368,7 @@ useEffect(() => {
 
                   <div>
                     <Label className="text-blue-800 font-semibold mb-3 block">Choose Grade Level:</Label>
-                    <Select onValueChange={(value) => {
+                    <Select value={selectedGradeLevel?.toString() ?? undefined} onValueChange={(value) => {
                       setSelectedGradeLevel(parseInt(value));
                     }}>
                       <SelectTrigger className="rounded-xl border-2 border-blue-200 h-12">

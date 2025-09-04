@@ -76,7 +76,7 @@ const DropZone: React.FC<DropZoneProps> = ({ index, letter, onDrop }) => {
         letter ? 'border-blue-400' : 'border-gray-300'
       } ${isOver && canDrop ? 'bg-blue-100' : ''}`}
     >
-      {letter || <span className="text-gray-400">?</span>}
+      {letter?letter.toUpperCase() :<span className="text-gray-400">?</span>}
     </div>
   );
 };
@@ -172,9 +172,8 @@ export const UnifiedGameInterface: React.FC<UnifiedGameInterfaceProps> = ({
     // owl message + auto speak
     const messages = [
       `Listen carefully ${playerName}! What word do you hear?`,
-      `Great job so far! Let's spell this next word!`,
-      `You're doing amazing! Time for another word!`,
-      `Ready for the next one? You've got this!`,
+      ` Let's spell the  word!`,
+      `You've got this!`,
     ];
     const msg = messages[Math.floor(Math.random() * messages.length)];
     setOwlMessage(msg);
@@ -222,6 +221,7 @@ export const UnifiedGameInterface: React.FC<UnifiedGameInterfaceProps> = ({
     const updated = [...results, row];
     setResults(updated);
     setIsComplete(true);
+    window.speechSynthesis.cancel();
 
     if (currentIndex < totalWords - 1) {
       setCurrentIndex((i) => i + 1);
@@ -244,6 +244,7 @@ export const UnifiedGameInterface: React.FC<UnifiedGameInterfaceProps> = ({
     const updated = [...results, row];
     setResults(updated);
     setIsComplete(true);
+    window.speechSynthesis.cancel();
 
     if (currentIndex < totalWords - 1) {
       setCurrentIndex((i) => i + 1);
@@ -293,8 +294,8 @@ export const UnifiedGameInterface: React.FC<UnifiedGameInterfaceProps> = ({
           </div>
 
           <div className="text-right">
-            <div className="text-sm font-bold text-purple-800">{playerName}</div>
-            <div className="text-xs text-gray-600">{gradeName}</div>
+            <div className="text-sm font-bold text-purple-800">Name : {playerName}</div>
+            <div className="text-xs text-gray-600">Grade Level : {gradeName}</div>
           </div>
         </div>
 
