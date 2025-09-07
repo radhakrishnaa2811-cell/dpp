@@ -27,5 +27,13 @@ COPY --from=build /app/build ./
 # Copy custom Nginx config (optional, for routing)
 COPY nginx.conf /etc/nginx/conf.d/default.conf
 
+# Copy the generate-config.sh script to create config.js at runtime
+COPY generate-config.sh /generate-config.sh
+
+# Make the script executable
+RUN chmod +x /generate-config.sh
+
+# Run the script to generate config.js before starting Nginx
+CMD ["/bin/sh", "-c", "/generate-config.sh && nginx -g 'daemon off;'"]
+
 EXPOSE 80
-CMD ["nginx", "-g", "daemon off;"]

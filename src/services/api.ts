@@ -1,8 +1,15 @@
 import axios from 'axios';
 import { getAuth, onAuthStateChanged, User } from "firebase/auth";
 
+interface Window {
+  env: {
+    REACT_APP_API_URL?: string;
+  };
+}
+declare const window: Window;
+
 const api = axios.create({
-    baseURL: process.env.REACT_APP_API_URL,
+    baseURL: window.env?.REACT_APP_API_URL || process.env.REACT_APP_API_URL,
 });
 
 // Add Firebase token to requests
@@ -90,7 +97,7 @@ export async function saveUserData( userDetails: Record<string, any>) {
             throw error;
         }
     }
-    export async function submitWords(results:{ word: string; user_input: string; type: string }[], childId: any) {
+    export async function submitWords(results:{ word: string; user_input: string; type: string }[], childId: any, gradeName: any) {
         try {
              const auth = getAuth();
             const user = auth.currentUser;
@@ -98,6 +105,7 @@ export async function saveUserData( userDetails: Record<string, any>) {
             const response = await api.post('/submit_words/', {
                 idToken: idToken,
                 child_id: childId,
+                grade: gradeName,
                 words: results,
             });
             console.log('result from backend', response.data);
