@@ -112,10 +112,11 @@ useEffect(() => {
 
   const handleAddProfile = async () => {
     if (newProfile.name && newProfile.age) {
+      let response=null;
       try {
         // Call the API to add child
         if (currentUser.id !=='guest'){
-        await addChild({
+         response = await addChild({
           name: newProfile.name,
           age: parseInt(newProfile.age),
           grade: gradeLevels[newProfile.gradeLevel].name
@@ -124,7 +125,7 @@ useEffect(() => {
 
         // Create local profile after successful API call
         const profile: PlayerProfile = {
-          id: Date.now().toString(),
+          id: response.child_id, // Use backend id or fallback
           name: newProfile.name,
           age: parseInt(newProfile.age),
           gradeLevel: newProfile.gradeLevel,
@@ -182,7 +183,7 @@ useEffect(() => {
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
           <div className="flex items-center gap-4">
-            <div className="text-6xl animate-gentle-float">🦉</div>
+            <div className="text-6xl animate-gentle-float"><img ></img></div>
             <div>
               <h1 className="text-4xl font-bold text-purple-800"> Dashboard</h1>
               <p className="text-purple-600">Welcome back, {currentUser.name}! 👋</p>

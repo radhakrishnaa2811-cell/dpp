@@ -13,6 +13,7 @@ import {
   onAuthStateChanged,
   signInWithEmailAndPassword
 } from 'firebase/auth';
+import logo from '../assets/logo.png';
 import { saveUserData } from '../services/api';
 interface User {
   id: string;
@@ -219,7 +220,11 @@ export const Authentication: React.FC<AuthenticationProps> = ({ onAuthSuccess })
       <div className="w-full max-w-md">
         {/* Welcome Header */}
         <div className="text-center mb-8">
-          <div className="text-9xl mb-4 animate-float">🦉</div>
+          <img 
+            src={logo}
+            alt="DPP Logo"
+            className="w-50 h-50 mx-auto mb-4  object-contain"
+          />
         </div>
 
         <Card className="p-8 bg-white/95 backdrop-blur border-4 border-white rounded-3xl shadow-2xl">

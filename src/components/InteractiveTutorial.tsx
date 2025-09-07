@@ -124,6 +124,13 @@ export const InteractiveTutorial: React.FC<TutorialProps> = ({ onComplete, onSki
     };
 
     loadVoices().then((availableVoices) => {
+      // Log available voices to help with debugging
+      console.log("Available voices:", availableVoices.map(v => ({
+        name: v.name,
+        lang: v.lang,
+        isDefault: v.default,
+        isLocalService: v.localService
+      })));
       setVoices(availableVoices);
       setVoicesLoaded(true);
     });
@@ -136,14 +143,21 @@ export const InteractiveTutorial: React.FC<TutorialProps> = ({ onComplete, onSki
     const cleanMessage = message.replace(/[^\w\s.,!?]/g, '').replace(/\s+/g, ' ').trim();
     if (cleanMessage) {
       const utterance = new SpeechSynthesisUtterance(cleanMessage);
-      const ukVoice = voices.find(voice => 
-        voice.lang.includes('en-GB') && voice.name.includes('Female')
-      ) || voices.find(voice => voice.lang.includes('en-GB')) || voices[0];
+      // Try to find the most natural female voice available
+      const naturalVoice = voices.find(voice => 
+        voice.lang.includes('en-US') && 
+        (voice.name.includes('Samantha') || // MacOS natural voice
+         voice.name.includes('Microsoft Zira') || // Windows natural voice
+         voice.name.includes('Google US English Female')) // Chrome voice
+      ) || voices.find(voice => 
+        voice.lang.includes('en-US') && voice.name.includes('Female')
+      ) || voices.find(voice => voice.lang.includes('en-US')) || voices[0];
       
-      if (ukVoice) {
-        utterance.voice = ukVoice;
-        utterance.rate = 0.9;
-        utterance.pitch = 1.2;
+      if (naturalVoice) {
+        utterance.voice = naturalVoice;
+        utterance.rate = 0.95; // Slightly slower for clarity
+        utterance.pitch = 1.05; // Slightly higher pitch for female voice
+        utterance.volume = 1; // Maximum volume
         speechSynthesis.speak(utterance);
       }
     }
