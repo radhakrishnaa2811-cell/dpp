@@ -19,7 +19,6 @@ const SpellingAssessment: React.FC<SpellingAssessmentProps> = ({
     <div className="max-w-4xl mx-auto p-5">
       <div className="flex items-center gap-3 mb-4">
         <h1 className="text-3xl font-bold">Spelling Assessment</h1>
-        <div className="text-4xl animate-gentle-float">🦉</div>
       </div>
       <h2 className="text-xl font-semibold mb-3">Assessment Summary</h2>
       <div className="grid grid-cols-2 gap-4 mb-4">

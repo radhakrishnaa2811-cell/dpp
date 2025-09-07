@@ -162,7 +162,7 @@ export default function App() {
 
 const handleWordComplete = async (results: Array<{ word: string; user_input: string; type: string }>) => {
   try {
-    const gradeName = gradeLevels[gradeLevel].name.replace(/ grade$/i, '').trim();
+    const gradeName = gradeLevels[selectedGradeLevel].name.replace(/ grade$/i, '').trim();
     const response = await submitWords(results, selectedProfile?.id, gradeName);
     setAssessmentData(response); // Store the API response
     setGameState('complete');

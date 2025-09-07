@@ -4,6 +4,7 @@ import { Button } from './ui/button';
 import { Progress } from './ui/progress';
 import { Volume2, ArrowRight, ArrowLeft, CheckCircle, Play, RotateCcw } from 'lucide-react';
 
+
 interface TutorialProps {
   onComplete: () => void;
   onSkip: () => void;
@@ -312,20 +313,16 @@ export const InteractiveTutorial: React.FC<TutorialProps> = ({ onComplete, onSki
             {/* Left Column - Huge Olly Character */}
             <div className="text-center">
               <div className="relative">
-                {/* Main Olly Character - HUGE! */}
-                <div className="text-[12rem] leading-none animate-gentle-float filter drop-shadow-2xl">
-                  🦉
-                </div>
+              
                 
                 {/* Expression overlay */}
-                <div className="absolute -top-4 -right-4 text-6xl animate-gentle-bounce">
+                {/* <div className="absolute -top-4 -right-4 text-6xl animate-gentle-bounce">
                   {step.owlExpression}
-                </div>
+                </div> */}
                 
                 {/* Speech bubble */}
                 <div className="relative mt-6">
                   <div className="bg-purple-100 rounded-3xl p-6 border-4 border-purple-300 relative">
-                    <div className="absolute -top-4 left-1/2 transform -translate-x-1/2 w-8 h-8 bg-purple-100 border-l-4 border-t-4 border-purple-300 rotate-45"></div>
                     <p className="text-lg text-purple-900 font-medium leading-relaxed">
                       {step.owlMessage}
                     </p>

@@ -322,7 +322,6 @@ export const UnifiedGameInterface: React.FC<UnifiedGameInterfaceProps> = ({
             {/* Left Column - Owl Character */}
             <div className="md:col-span-3 flex flex-col justify-center items-center">
               <div className="text-center mb-4 w-full max-w-xs">
-                <div className="text-4xl sm:text-5xl md:text-6xl character-animation mb-4 drop-shadow">🦉</div>
                 <div className="text-base sm:text-lg font-bold text-purple-800 mb-2">Olly says:</div>
                 <div className="bg-purple-100 rounded-2xl p-2 sm:p-3 border-3 border-purple-300">
                   <p className="text-xs sm:text-sm text-purple-900 font-medium leading-tight">{owlMessage}</p>
@@ -400,7 +399,7 @@ export const UnifiedGameInterface: React.FC<UnifiedGameInterfaceProps> = ({
                   {/* Next */}
                   <Button
                     onClick={handleNextDrag}
-                    disabled={userPhonemes.every((l) => !l) || isComplete}
+                    disabled={isComplete}
                     className="mt-3 w-full max-w-[200px] h-10 sm:h-12 bg-green-500 hover:bg-green-600 rounded-2xl btn-bouncy text-lg sm:text-xl"
                     size="lg"
                   >
@@ -422,7 +421,7 @@ export const UnifiedGameInterface: React.FC<UnifiedGameInterfaceProps> = ({
                     />
                     <Button
                       onClick={handleNextTyping}
-                      disabled={!userInput.trim() || isComplete}
+                      disabled={ isComplete}
                       className="mt-3 w-full h-10 sm:h-12 bg-purple-500 hover:bg-purple-600 rounded-2xl btn-bouncy text-lg sm:text-xl"
                       size="lg"
                     >
