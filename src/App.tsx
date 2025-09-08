@@ -62,6 +62,7 @@ export default function App() {
   const [currentWordIndex, setCurrentWordIndex] = useState(0);
   const [gameState, setGameState] = useState<GameState>('intro');
   const [wordsList, setWordsList] = useState<Word[]>([]);
+  const [isAuthChecking, setIsAuthChecking] = useState(true); // Add this state for auth checking
   const [sessionStats, setSessionStats] = useState({
     wordsCompleted: 0,
     totalAttempts: 0,
@@ -79,23 +80,42 @@ export default function App() {
 
   // Check for existing authentication on app load
   useEffect(() => {
-    const savedUser = localStorage.getItem('phonics-current-user');
-    if (savedUser) {
-      try {
-        const user = JSON.parse(savedUser);
-        setCurrentUser(user);
-        // Check if user has seen tutorial
-        if (user.hasSeenTutorial) {
-          setCurrentView('dashboard');
-        } else {
-          setCurrentView('tutorial');
+    setIsAuthChecking(true); // Start checking auth
+    
+    const unsubscribe = auth.onAuthStateChanged((firebaseUser) => {
+      const savedUser = localStorage.getItem('phonics-current-user');
+      
+      if (firebaseUser && savedUser) {
+        try {
+          const user = JSON.parse(savedUser);
+          setCurrentUser(user);
+          // Check if user has seen tutorial
+          if (user.hasSeenTutorial) {
+            setCurrentView('dashboard');
+          } else {
+            setCurrentView('tutorial');
+          }
+        } catch (error) {
+          console.error('Error parsing saved user:', error);
+          localStorage.removeItem('phonics-current-user');
+          setCurrentView('auth');
         }
-      } catch (error) {
-        console.error('Error parsing saved user:', error);
+      } else {
+        // No Firebase user or no saved user data
         localStorage.removeItem('phonics-current-user');
+        setCurrentUser(null);
         setCurrentView('auth');
       }
-    }
+      
+      // Auth check complete
+      setIsAuthChecking(false);
+    });
+
+    // Cleanup subscription
+    return () => {
+      unsubscribe();
+      setIsAuthChecking(false);
+    };
   }, []);
 
   const handleAuthSuccess = (user: User) => {
@@ -229,60 +249,89 @@ const handleWordComplete = async (results: Array<{ word: string; user_input: str
     }
   };
 
-    if (isLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <div className="inline-block animate-spin rounded-full h-12 w-12 border-4 border-yellow-500 border-t-transparent"></div>
-          <p className="mt-4 text-lg text-gray-600">Loading ...</p>
+    // Show loader while checking authentication
+    if (isAuthChecking) {
+      return (
+        <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-purple-100 to-blue-100">
+          <div className="text-center">
+            <div className="inline-block animate-spin rounded-full h-12 w-12 border-4 border-purple-500 border-t-transparent"></div>
+            <p className="mt-4 text-lg text-purple-800">Checking authentication...</p>
+          </div>
         </div>
-      </div>
-    );
-  }
+      );
+    }
 
-  // ...existing code...
+    // Show loader while loading game content
+    if (isLoading) {
+      return (
+        <div className="min-h-screen flex items-center justify-center">
+          <div className="text-center">
+            <div className="inline-block animate-spin rounded-full h-12 w-12 border-4 border-yellow-500 border-t-transparent"></div>
+            <p className="mt-4 text-lg text-gray-600">Loading ...</p>
+          </div>
+        </div>
+      );
+    }
+    // Protected Route wrapper component
+    const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
+      if (!currentUser || currentView === 'auth') {
+        return <Authentication onAuthSuccess={handleAuthSuccess} />;
+      }
+      return <>{children}</>;
+    };
+
     return (
     <Router>
       <Routes>
         <Route path="/" element={
-          (currentView === 'auth' || !currentUser) ? (
-            <div>
-              <Authentication onAuthSuccess={handleAuthSuccess} />
-            </div>
-          ) : (currentView === 'tutorial') ? (
-      <InteractiveTutorial
-        onComplete={handleTutorialComplete}
-        onSkip={handleTutorialSkip}
-        userName={currentUser.name}
-      />
-          ) : (currentView === 'dashboard') ? (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-purple-50">
-        <Dashboard 
-          onStartGame={handleStartGame} 
-          currentUser={currentUser}
-          onLogout={handleLogout}
-          onShowTutorial={() => setCurrentView('tutorial')}
-        />
-      </div>
+          (!currentUser && !isAuthChecking) ? (
+            <Authentication onAuthSuccess={handleAuthSuccess} />
+          ) : currentView === 'tutorial' ? (
+            <ProtectedRoute>
+              <InteractiveTutorial
+                onComplete={handleTutorialComplete}
+                onSkip={handleTutorialSkip}
+                userName={currentUser?.name || ''}
+              />
+            </ProtectedRoute>
+          ) : currentView === 'dashboard' ? (
+            <ProtectedRoute>
+              <div className="min-h-screen bg-gradient-to-br from-blue-50 to-purple-50">
+                <Dashboard 
+                  onStartGame={handleStartGame} 
+                  currentUser={currentUser!}
+                  onLogout={handleLogout}
+                  onShowTutorial={() => setCurrentView('tutorial')}
+                />
+              </div>
+            </ProtectedRoute>
           ) : (!currentWord || !selectedProfile) ? (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-purple-200 via-pink-200 to-blue-200">
-        <div className="text-center">
-          <div className="text-6xl animate-gentle-float mb-4">🦉</div>
-          <div className="text-xl">Loading your phonics adventure...</div>
-        </div>
-      </div>
+            <ProtectedRoute>
+              <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-purple-200 via-pink-200 to-blue-200">
+                <div className="text-center">
+                  <div className="text-6xl animate-gentle-float mb-4">🦉</div>
+                  <div className="text-xl">Loading your phonics adventure...</div>
+                </div>
+              </div>
+            </ProtectedRoute>
           ) : (gameState === 'complete') ? (
-          <SpellingAssessment  assessmentData={assessmentData }
-    onBackToDashboard={handleBackToDashboard} />
+            <ProtectedRoute>
+              <SpellingAssessment 
+                assessmentData={assessmentData}
+                onBackToDashboard={handleBackToDashboard} 
+              />
+            </ProtectedRoute>
           ) : (
-    <UnifiedGameInterface
-      words={currentWord}
-      onComplete={({ words }) => {handleWordComplete(words)}}
-      onBackToDashboard={handleBackToDashboard}
-      isDragMode={useDragDrop}
-      playerName={selectedProfile.name}
-      gradeName={currentGrade.name}
-    />
+            <ProtectedRoute>
+              <UnifiedGameInterface
+                words={currentWord}
+                onComplete={({ words }) => {handleWordComplete(words)}}
+                onBackToDashboard={handleBackToDashboard}
+                isDragMode={useDragDrop}
+                playerName={selectedProfile.name}
+                gradeName={currentGrade.name}
+              />
+            </ProtectedRoute>
           )
         } />
         <Route path="/demo" element={<DemoTest />} />
